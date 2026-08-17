@@ -25,5 +25,8 @@ target
 
 /target
 
-
+#mac
 .DS_Store
+
+#vim
+.*.swp
