@@ -24,4 +24,21 @@ use std::{
 
 use fltk_theme::{color_themes, ColorTheme, ThemeType, WidgetTheme};
 
+#[derive(Debug)]
+enum LinkLayerProtocol {
+    ARP(String),
+    VLAN(u16, String),
+    PPP(String),
+    Tunnel(String),
+    Unknown(String),
+}
+
+struct LinkLayerFrame {
+    timestamp: f64,
+    source_mac: String,
+    dest_mac: String,
+    protocol: LinkLayerProtocol,
+    length: usize,
+}
+
 fn main() {}
