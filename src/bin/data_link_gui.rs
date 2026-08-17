@@ -41,4 +41,20 @@ struct LinkLayerFrame {
     length: usize,
 }
 
+fn parse_arp_packets(arp_packets: &ArpPacket) -> String {
+    let operation = match arp_packets.get_operation() {
+        ArpOperation(0) => "Request",
+        ArpOperation(1) => "Reply",
+        _ => "Unknown",
+    };
+    format!(
+        "{} Sender: {}({}) -> Target: {}({})",
+        operation,
+        arp_packets.get_sender_hw_addr(),
+        arp_packets.get_sender_proto_addr(),
+        arp_packets.get_target_hw_addr(),
+        arp_packets.get_target_proto_addr(),
+    )
+}
+
 fn main() {}
