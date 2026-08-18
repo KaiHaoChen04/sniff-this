@@ -65,4 +65,19 @@ fn parse_vlan_packets(vlan_packets: &VlanPacket) -> (u16, String) {
     (vlan_id, format!("PCP={}, DEI={}", pcp, dei))
 }
 
+fn format_frame(frame: &LinkLayerFrame, count: usize) -> String {
+    let protocol_string = match &frame.protocol {
+        LinkLayerProtocol::ARP(details) => format!("ARP     {}", details),
+        LinkLayerProtocol::VLAN((id), (details)) => format!("VLAN     {}{}", id, details),
+        LinkLayerProtocol::PPP(details) => format!("PPP      {}", details),
+        LinkLayerProtocol::Tunnel(details) => format!("Tunnel     {}", details),
+        LinkLayerProtocol::Unknown(details) => format!("Unknown    {}", details),
+    };
+
+    format!(
+        "{:>6} {:>12.6} {:>18} -> {:>18} {:>4} {}\n",
+        count, frame.timestamp, frame.source_mac, frame.dest_mac, frame.length, protocol_string,
+    )
+}
+
 fn main() {}
