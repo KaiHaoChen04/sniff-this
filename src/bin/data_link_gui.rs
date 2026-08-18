@@ -56,5 +56,13 @@ fn parse_arp_packets(arp_packets: &ArpPacket) -> String {
         arp_packets.get_target_proto_addr(),
     )
 }
+fn parse_vlan_packets(vlan_packets: &VlanPacket) -> (u16, String) {
+    let vlan_id = vlan_packets.get_vlan_identifier();
+    let pcp = vlan_packets.get_priority_code_point().0;
+    let dei = vlan_packets.get_drop_eligible_indicator();
+
+    // Might add eternet type in later
+    (vlan_id, format!("PCP={}, DEI={}", pcp, dei))
+}
 
 fn main() {}
