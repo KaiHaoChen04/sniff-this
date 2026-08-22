@@ -124,4 +124,17 @@ fn main() {
 
     wind.end();
     wind.show();
+
+    let buffer = Arc::new(Mutex::new(buffer));
+    let running = Arc::new(Mutex::new(false));
+    let frame_count = Arc::new(Mutex::new(0));
+    let start_time = Arc::new(Mutex::new(0u64));
+    let selected_protocol = Arc::new(Mutex::new(0));
+
+    protocol_choices.set_callback({
+        let curr_protocol = selected_protocol.clone();
+        move |c| {
+            *curr_protocol.lock().unwrap() = c.value();
+        }
+    });
 }
