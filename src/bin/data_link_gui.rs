@@ -80,4 +80,48 @@ fn format_frame(frame: &LinkLayerFrame, count: usize) -> String {
     )
 }
 
-fn main() {}
+fn main() {
+    let app = app::App::default().with_scheme(app::Scheme::Gtk);
+    let theme = ColorTheme::new(color_themes::DARK_THEME);
+    theme.apply();
+
+    let mut wind = Window::new(100, 100, 1200, 600, "Sniff This");
+
+    let mut interface_choice = Choice::new(10, 10, 200, 25, None);
+    let interfaces: Vec<_> = datalink::interfaces()
+        .into_iter()
+        .filter(|i| i.is_up() && !i.is_loopback())
+        .map(|i_name| i_name.name)
+        .collect();
+
+    for name in &interfaces {
+        interface_choice.add_choice(name);
+    }
+    interface_choice.set_value(0);
+
+    let mut protocol_choices = Choice::new(10, 10, 200, 25, None);
+    protocol_choices.add_choice("All Link Layers");
+    protocol_choices.add_choice("ARP");
+    protocol_choices.add_choice("VLAN");
+    protocol_choices.add_choice("PPP");
+    protocol_choices.add_choice("Tunnel");
+    protocol_choices.set_value(0);
+
+    let mut start_button = Button::new(300, 10, 70, 25, "Start");
+
+    let mut text_display = TextDisplay::new(10, 45, 1180, 545, None);
+    text_display.set_text_font(Font::Courier);
+    let mut buffer = TextBuffer::default();
+    text_display.set_buffer(buffer.clone());
+
+    buffer.append(&format!(
+        "{:>6} {:>12} {:>18} {:>20} {:>4} {}\n",
+        "No.", "Time", "Source MAC", "Dest MAC", "Len", "Protocol & Details"
+    ));
+
+    buffer.append(&"-".repeat(100));
+    buffer.append("\n");
+
+    wind.end();
+    wind.show();
+}
