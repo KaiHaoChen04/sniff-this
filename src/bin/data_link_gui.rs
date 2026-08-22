@@ -137,4 +137,24 @@ fn main() {
             *curr_protocol.lock().unwrap() = c.value();
         }
     });
+
+    start_button.set_callback({
+        let buffer = buffer.clone();
+        let running = running.clone();
+        let interfaces = interfaces.clone();
+        let interfaces_choice = interface_choice.clone();
+        let frame_count = frame_count.clone();
+        let start_time = start_time.clone();
+        let selected_protocol = selected_protocol.clone();
+
+        move |b| {
+            let mut is_running = running.lock().unwrap();
+            if *is_running {
+                *is_running = false;
+                b.set_label("Start");
+            } else {
+                *is_running = true;
+            }
+        }
+    });
 }
