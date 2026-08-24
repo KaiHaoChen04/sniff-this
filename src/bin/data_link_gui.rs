@@ -194,6 +194,10 @@ fn main() {
                             return;
                         }
                     };
+                    *start_time.lock().unwrap() = SystemTime::now()
+                        .duration_since(UNIX_EPOCH)
+                        .unwrap()
+                        .as_micros() as u64;
                 });
             }
         }
