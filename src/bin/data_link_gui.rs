@@ -8,7 +8,7 @@ use fltk::{
     window::Window,
 };
 use pnet::{
-    datalink,
+    datalink::{self, NetworkInterface},
     packet::{
         arp::{ArpOperation, ArpPacket},
         ethernet::{EtherType, EthernetPacket},
@@ -91,10 +91,11 @@ fn main() {
     let interfaces: Vec<_> = datalink::interfaces()
         .into_iter()
         .filter(|i| i.is_up() && !i.is_loopback())
-        .map(|i_name| i_name.name)
         .collect();
 
-    for name in &interfaces {
+    let interfaces_names: Vec<_> = interfaces.iter().map(|name| name.name.clone()).collect();
+
+    for name in &interfaces_names {
         interface_choice.add_choice(name);
     }
     interface_choice.set_value(0);
@@ -154,6 +155,46 @@ fn main() {
                 b.set_label("Start");
             } else {
                 *is_running = true;
+                b.set_label("Stop");
+                let buffer = buffer.clone();
+                let running = running.clone();
+                let interfaces_index = interface_choice.value() as usize;
+                let interface = interfaces[interfaces_index].clone();
+                let frame_count = frame_count.clone();
+                let start_time = start_time.clone();
+                let selected_protocol = selected_protocol.clone();
+
+                thread::spawn(move || {
+                    let config = datalink::Config {
+                        write_buffer_size: 4096,
+                        read_buffer_size: 4096,
+                        read_timeout: None,
+                        write_timeout: None,
+                        channel_type: datalink::ChannelType::Layer2,
+                        bpf_fd_attempts: 1000,
+                        linux_fanout: None,
+                        promiscuous: true,
+                        socket_fd: None,
+                    };
+
+                    let (tx, rx) = match datalink::channel(&interface, config) {
+                        Ok(datalink::Channel::Ethernet(tx, rx)) => (tx, rx),
+                        Ok(_) => {
+                            buffer
+                                .lock()
+                                .unwrap()
+                                .append("Error: not an eternet channel");
+                            return;
+                        }
+                        Err(e) => {
+                            buffer
+                                .lock()
+                                .unwrap()
+                                .append(&format!("Error creating channel: {}", e));
+                            return;
+                        }
+                    };
+                });
             }
         }
     });
