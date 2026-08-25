@@ -10,10 +10,7 @@ use fltk::{
 use pnet::{
     datalink::{self, NetworkInterface},
     packet::{
-        arp::{ArpOperation, ArpPacket},
-        ethernet::{EtherType, EthernetPacket},
-        vlan::VlanPacket,
-        Packet,
+        Packet, arp::{ArpOperation, ArpPacket}, ethernet::{EtherType, EtherTypes, EthernetPacket}, vlan::VlanPacket
     },
 };
 use std::{
@@ -198,6 +195,25 @@ fn main() {
                         .duration_since(UNIX_EPOCH)
                         .unwrap()
                         .as_micros() as u64;
+                
+                    while *running.lock().unwrap() {
+                        match rx.next() {
+                            Ok(packet) => {
+                                if let Some(eternet) = EthernetPacket::new(packet) {
+                                    let protocol = match eternet.get_ethertype() {
+                                        EtherTypes::Arp => {
+                                            if let Some(arp) = ArpPacket::new(eternet.payload()) {
+                                                LinkLayerProtocol::ARP(parse_arp_packets(&arp))
+                                            }
+                                            else {
+                                                LinkLayerProtocol::Unknown("Malformed ARP".to_string()) 
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 });
             }
         }
