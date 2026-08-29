@@ -208,6 +208,15 @@ fn main() {
                                             else {
                                                 LinkLayerProtocol::Unknown("Malformed ARP".to_string()) 
                                             }
+                                        },
+                                        EtherTypes::Vlan => {
+                                            if let Some(vlan) = VlanPacket::new(eternet.payload()) {
+                                                let (id, details) = parse_vlan_packets(&vlan);
+                                                LinkLayerProtocol::VLAN(id, details)
+                                            }
+                                            else{
+                                                LinkLayerProtocol::Unknown("Malformed VLAN".to_string())
+                                            }
                                         }
                                     }
                                 }
