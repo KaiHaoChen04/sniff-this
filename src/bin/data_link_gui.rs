@@ -10,7 +10,10 @@ use fltk::{
 use pnet::{
     datalink::{self, NetworkInterface},
     packet::{
-        Packet, arp::{ArpOperation, ArpPacket}, ethernet::{EtherType, EtherTypes, EthernetPacket}, vlan::VlanPacket
+        arp::{ArpOperation, ArpPacket},
+        ethernet::{EtherType, EtherTypes, EthernetPacket},
+        vlan::VlanPacket,
+        Packet,
     },
 };
 use std::{
@@ -195,7 +198,7 @@ fn main() {
                         .duration_since(UNIX_EPOCH)
                         .unwrap()
                         .as_micros() as u64;
-                
+
                     while *running.lock().unwrap() {
                         match rx.next() {
                             Ok(packet) => {
@@ -204,21 +207,49 @@ fn main() {
                                         EtherTypes::Arp => {
                                             if let Some(arp) = ArpPacket::new(eternet.payload()) {
                                                 LinkLayerProtocol::ARP(parse_arp_packets(&arp))
+                                            } else {
+                                                LinkLayerProtocol::Unknown(
+                                                    "Malformed ARP".to_string(),
+                                                )
                                             }
-                                            else {
-                                                LinkLayerProtocol::Unknown("Malformed ARP".to_string()) 
-                                            }
-                                        },
+                                        }
                                         EtherTypes::Vlan => {
                                             if let Some(vlan) = VlanPacket::new(eternet.payload()) {
                                                 let (id, details) = parse_vlan_packets(&vlan);
                                                 LinkLayerProtocol::VLAN(id, details)
-                                            }
-                                            else{
-                                                LinkLayerProtocol::Unknown("Malformed VLAN".to_string())
+                                            } else {
+                                                LinkLayerProtocol::Unknown(
+                                                    "Malformed VLAN".to_string(),
+                                                )
                                             }
                                         }
-                                    }
+                                        EtherTypes::Ptp => {
+                                            LinkLayerProtocol::PPP("PPP Frame".to_string())
+                                        }
+                                        EtherTypes::Mpls => {
+                                            LinkLayerProtocol::Tunnel("MPLS frame".to_string())
+                                        }
+                                        other => {
+                                            if other.0 == 34525 {
+                                                let direction = if packet.len() == 74 {
+                                                    "Request"
+                                                } else if packet.len() == 86 {
+                                                    "Response"
+                                                } else {
+                                                    "Unknown"
+                                                };
+                                                LinkLayerProtocol::Unknown(format!(
+                                                    "Keepalive {} (Type 34525)",
+                                                    direction
+                                                ))
+                                            } else {
+                                                LinkLayerProtocol::Unknown(format!(
+                                                    "Unknown {}",
+                                                    other
+                                                ))
+                                            }
+                                        }
+                                    };
                                 }
                             }
                         }
