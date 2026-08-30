@@ -250,6 +250,24 @@ fn main() {
                                             }
                                         }
                                     };
+                                    let protocol_value = *selected_protocol.lock().unwrap();
+                                    let should_display = match protocol_value {
+                                        0 => true,
+                                        1 => matches!(protocol, LinkLayerProtocol::ARP(_)),
+                                        2 => matches!(protocol, LinkLayerProtocol::VLAN(_, _)),
+                                        3 => matches!(protocol, LinkLayerProtocol::PPP(_)),
+                                        4 => matches!(protocol, LinkLayerProtocol::Tunnel(_)),
+                                        _ => false,
+                                    };
+
+                                    if should_display {
+                                        let current_time = *start_time.lock().unwrap();
+                                        let now = SystemTime::now()
+                                            .duration_since(UNIX_EPOCH)
+                                            .unwrap()
+                                            .as_micros()
+                                            as u64;
+                                    }
                                 }
                             }
                         }
