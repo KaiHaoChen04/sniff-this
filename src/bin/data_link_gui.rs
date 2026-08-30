@@ -158,7 +158,7 @@ fn main() {
                 b.set_label("Stop");
                 let buffer = buffer.clone();
                 let running = running.clone();
-                let interfaces_index = interface_choice.value() as usize;
+                let interfaces_index = interfaces_choice.value() as usize;
                 let interface = interfaces[interfaces_index].clone();
                 let frame_count = frame_count.clone();
                 let start_time = start_time.clone();
@@ -177,7 +177,7 @@ fn main() {
                         socket_fd: None,
                     };
 
-                    let (tx, rx) = match datalink::channel(&interface, config) {
+                    let (_tx, mut rx) = match datalink::channel(&interface, config) {
                         Ok(datalink::Channel::Ethernet(tx, rx)) => (tx, rx),
                         Ok(_) => {
                             buffer
@@ -203,6 +203,7 @@ fn main() {
                         match rx.next() {
                             Ok(packet) => {
                                 if let Some(eternet) = EthernetPacket::new(packet) {
+                                    eprint!("packet received len: {}", packet.len());
                                     let protocol = match eternet.get_ethertype() {
                                         EtherTypes::Arp => {
                                             if let Some(arp) = ArpPacket::new(eternet.payload()) {
@@ -261,14 +262,36 @@ fn main() {
                                     };
 
                                     if should_display {
-                                        let current_time = *start_time.lock().unwrap();
-                                        let now = SystemTime::now()
-                                            .duration_since(UNIX_EPOCH)
-                                            .unwrap()
-                                            .as_micros()
-                                            as u64;
+                                        let current_time = {
+                                            let start = *start_time.lock().unwrap();
+                                            let now = SystemTime::now()
+                                                .duration_since(UNIX_EPOCH)
+                                                .unwrap()
+                                                .as_micros()
+                                                as u64;
+                                            (now - start) as f64 / 1_000_000.0
+                                        };
+                                        let frame = LinkLayerFrame {
+                                            timestamp: current_time,
+                                            source_mac: eternet.get_source().to_string(),
+                                            dest_mac: eternet.get_destination().to_string(),
+                                            protocol,
+                                            length: packet.len(),
+                                        };
+
+                                        let mut count = frame_count.lock().unwrap();
+                                        *count += 1;
+                                        let formatted = format_frame(&frame, *count);
+                                        buffer.lock().unwrap().append(&formatted);
                                     }
                                 }
+                            }
+                            Err(e) => {
+                                buffer
+                                    .lock()
+                                    .unwrap()
+                                    .append(&format!("Error capturing packet {}\n", e));
+                                break;
                             }
                         }
                     }
@@ -276,4 +299,5 @@ fn main() {
             }
         }
     });
+    app.run().unwrap();
 }
