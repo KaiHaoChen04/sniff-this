@@ -43,8 +43,8 @@ struct LinkLayerFrame {
 
 fn parse_arp_packets(arp_packets: &ArpPacket) -> String {
     let operation = match arp_packets.get_operation() {
-        ArpOperation(0) => "Request",
-        ArpOperation(1) => "Reply",
+        ArpOperation(1) => "Request",
+        ArpOperation(2) => "Reply",
         _ => "Unknown",
     };
     format!(
@@ -56,19 +56,19 @@ fn parse_arp_packets(arp_packets: &ArpPacket) -> String {
         arp_packets.get_target_proto_addr(),
     )
 }
+
 fn parse_vlan_packets(vlan_packets: &VlanPacket) -> (u16, String) {
     let vlan_id = vlan_packets.get_vlan_identifier();
     let pcp = vlan_packets.get_priority_code_point().0;
     let dei = vlan_packets.get_drop_eligible_indicator();
 
-    // Might add eternet type in later
     (vlan_id, format!("PCP={}, DEI={}", pcp, dei))
 }
 
 fn format_frame(frame: &LinkLayerFrame, count: usize) -> String {
     let protocol_string = match &frame.protocol {
         LinkLayerProtocol::ARP(details) => format!("ARP     {}", details),
-        LinkLayerProtocol::VLAN((id), (details)) => format!("VLAN     {}{}", id, details),
+        LinkLayerProtocol::VLAN(id, details) => format!("VLAN     {}{}", id, details),
         LinkLayerProtocol::PPP(details) => format!("PPP      {}", details),
         LinkLayerProtocol::Tunnel(details) => format!("Tunnel     {}", details),
         LinkLayerProtocol::Unknown(details) => format!("Unknown    {}", details),
@@ -100,7 +100,7 @@ fn main() {
     }
     interface_choice.set_value(0);
 
-    let mut protocol_choices = Choice::new(10, 10, 200, 25, None);
+    let mut protocol_choices = Choice::new(220, 10, 200, 25, None);
     protocol_choices.add_choice("All Link Layers");
     protocol_choices.add_choice("ARP");
     protocol_choices.add_choice("VLAN");
@@ -108,7 +108,7 @@ fn main() {
     protocol_choices.add_choice("Tunnel");
     protocol_choices.set_value(0);
 
-    let mut start_button = Button::new(300, 10, 70, 25, "Start");
+    let mut start_button = Button::new(440, 10, 70, 25, "Start");
 
     let mut text_display = TextDisplay::new(10, 45, 1180, 545, None);
     text_display.set_text_font(Font::Courier);
@@ -126,7 +126,8 @@ fn main() {
     wind.end();
     wind.show();
 
-    let buffer = Arc::new(Mutex::new(buffer));
+    let (sender, receiver) = app::channel::<String>();
+
     let running = Arc::new(Mutex::new(false));
     let frame_count = Arc::new(Mutex::new(0));
     let start_time = Arc::new(Mutex::new(0u64));
@@ -140,13 +141,13 @@ fn main() {
     });
 
     start_button.set_callback({
-        let buffer = buffer.clone();
         let running = running.clone();
         let interfaces = interfaces.clone();
         let interfaces_choice = interface_choice.clone();
         let frame_count = frame_count.clone();
         let start_time = start_time.clone();
         let selected_protocol = selected_protocol.clone();
+        let sender = sender.clone();
 
         move |b| {
             let mut is_running = running.lock().unwrap();
@@ -156,13 +157,23 @@ fn main() {
             } else {
                 *is_running = true;
                 b.set_label("Stop");
-                let buffer = buffer.clone();
                 let running = running.clone();
                 let interfaces_index = interfaces_choice.value() as usize;
+
+                if interfaces_index as i32 >= interfaces_choice.value().max(0)
+                    && interfaces.is_empty()
+                {
+                    eprintln!("No interfaces available.");
+                    *is_running = false;
+                    b.set_label("Start");
+                    return;
+                }
+
                 let interface = interfaces[interfaces_index].clone();
                 let frame_count = frame_count.clone();
                 let start_time = start_time.clone();
                 let selected_protocol = selected_protocol.clone();
+                let sender = sender.clone();
 
                 thread::spawn(move || {
                     let config = datalink::Config {
@@ -180,17 +191,13 @@ fn main() {
                     let (_tx, mut rx) = match datalink::channel(&interface, config) {
                         Ok(datalink::Channel::Ethernet(tx, rx)) => (tx, rx),
                         Ok(_) => {
-                            buffer
-                                .lock()
-                                .unwrap()
-                                .append("Error: not an eternet channel");
+                            eprintln!("Error: not an ethernet channel");
+                            sender.send("Error: not an ethernet channel\n".to_string());
                             return;
                         }
                         Err(e) => {
-                            buffer
-                                .lock()
-                                .unwrap()
-                                .append(&format!("Error creating channel: {}", e));
+                            eprintln!("Error creating channel: {}", e);
+                            sender.send(format!("Error creating channel: {}\n", e));
                             return;
                         }
                     };
@@ -202,11 +209,12 @@ fn main() {
                     while *running.lock().unwrap() {
                         match rx.next() {
                             Ok(packet) => {
-                                if let Some(eternet) = EthernetPacket::new(packet) {
-                                    eprint!("packet received len: {}", packet.len());
-                                    let protocol = match eternet.get_ethertype() {
+                                eprintln!("got packet, len={}", packet.len());
+
+                                if let Some(ethernet) = EthernetPacket::new(packet) {
+                                    let protocol = match ethernet.get_ethertype() {
                                         EtherTypes::Arp => {
-                                            if let Some(arp) = ArpPacket::new(eternet.payload()) {
+                                            if let Some(arp) = ArpPacket::new(ethernet.payload()) {
                                                 LinkLayerProtocol::ARP(parse_arp_packets(&arp))
                                             } else {
                                                 LinkLayerProtocol::Unknown(
@@ -215,7 +223,8 @@ fn main() {
                                             }
                                         }
                                         EtherTypes::Vlan => {
-                                            if let Some(vlan) = VlanPacket::new(eternet.payload()) {
+                                            if let Some(vlan) = VlanPacket::new(ethernet.payload())
+                                            {
                                                 let (id, details) = parse_vlan_packets(&vlan);
                                                 LinkLayerProtocol::VLAN(id, details)
                                             } else {
@@ -273,8 +282,8 @@ fn main() {
                                         };
                                         let frame = LinkLayerFrame {
                                             timestamp: current_time,
-                                            source_mac: eternet.get_source().to_string(),
-                                            dest_mac: eternet.get_destination().to_string(),
+                                            source_mac: ethernet.get_source().to_string(),
+                                            dest_mac: ethernet.get_destination().to_string(),
                                             protocol,
                                             length: packet.len(),
                                         };
@@ -282,15 +291,14 @@ fn main() {
                                         let mut count = frame_count.lock().unwrap();
                                         *count += 1;
                                         let formatted = format_frame(&frame, *count);
-                                        buffer.lock().unwrap().append(&formatted);
+
+                                        sender.send(formatted);
                                     }
                                 }
                             }
                             Err(e) => {
-                                buffer
-                                    .lock()
-                                    .unwrap()
-                                    .append(&format!("Error capturing packet {}\n", e));
+                                eprintln!("Error capturing packet: {}", e);
+                                sender.send(format!("Error capturing packet {}\n", e));
                                 break;
                             }
                         }
@@ -299,5 +307,12 @@ fn main() {
             }
         }
     });
-    app.run().unwrap();
+
+    while app.wait() {
+        if let Some(msg) = receiver.recv() {
+            buffer.append(&msg);
+            text_display.set_insert_position(buffer.length());
+            text_display.show_insert_position();
+        }
+    }
 }
