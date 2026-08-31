@@ -31,6 +31,8 @@ enum LinkLayerProtocol {
     PPP(String),
     Tunnel(String),
     Unknown(String),
+    IPV4(String),
+    IPV6(String),
 }
 
 struct LinkLayerFrame {
@@ -71,6 +73,8 @@ fn format_frame(frame: &LinkLayerFrame, count: usize) -> String {
         LinkLayerProtocol::VLAN(id, details) => format!("VLAN     {}{}", id, details),
         LinkLayerProtocol::PPP(details) => format!("PPP      {}", details),
         LinkLayerProtocol::Tunnel(details) => format!("Tunnel     {}", details),
+        LinkLayerProtocol::IPV4(details) => format!("IPV4     {}", details),
+        LinkLayerProtocol::IPV6(details) => format!("IPV6     {}", details),
         LinkLayerProtocol::Unknown(details) => format!("Unknown    {}", details),
     };
 
@@ -106,6 +110,8 @@ fn main() {
     protocol_choices.add_choice("VLAN");
     protocol_choices.add_choice("PPP");
     protocol_choices.add_choice("Tunnel");
+    protocol_choices.add_choice("IPV4");
+    protocol_choices.add_choice("IPV6");
     protocol_choices.set_value(0);
 
     let mut start_button = Button::new(440, 10, 70, 25, "Start");
@@ -239,6 +245,13 @@ fn main() {
                                         EtherTypes::Mpls => {
                                             LinkLayerProtocol::Tunnel("MPLS frame".to_string())
                                         }
+                                        EtherTypes::Ipv4 => {
+                                            LinkLayerProtocol::IPV4("IPV4".to_string())
+                                        }
+                                        EtherTypes::Ipv6 => {
+                                            LinkLayerProtocol::IPV6("IPV6".to_string())
+                                        }
+
                                         other => {
                                             if other.0 == 34525 {
                                                 let direction = if packet.len() == 74 {
@@ -267,6 +280,8 @@ fn main() {
                                         2 => matches!(protocol, LinkLayerProtocol::VLAN(_, _)),
                                         3 => matches!(protocol, LinkLayerProtocol::PPP(_)),
                                         4 => matches!(protocol, LinkLayerProtocol::Tunnel(_)),
+                                        5 => matches!(protocol, LinkLayerProtocol::IPV4(_)),
+                                        6 => matches!(protocol, LinkLayerProtocol::IPV6(_)),
                                         _ => false,
                                     };
 
