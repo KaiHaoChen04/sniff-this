@@ -1,6 +1,6 @@
 {
     "$schema": "https://opencode.ai/config.json",
-    "agents": {
+    "agent": {
         "build": {
             "mode": "primary",
             "prompt": "Build according to @plan",
@@ -10,6 +10,7 @@
             }
         },
         "plan":{
+            "mode": "primary",
             "prompt": "Plan according to user's prompt and delegate to build agent",
             "permission": {
                 "edit": "deny",
@@ -19,7 +20,10 @@
         "git-reviewer": {
             "mode": "subagent",
             "permission": {
-                "git *": "allow"      
+                "bash": {
+                    "*": "ask",
+                    "git *": "allow"      
+                }
             }
         }
     }
