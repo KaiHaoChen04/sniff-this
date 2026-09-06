@@ -6,4 +6,12 @@ edition = "2024"
 [dependencies]
 fltk-theme = "0.7"
 pnet = "0.35"
-fltk = "^1.5" 
+fltk = "^1.5"
+
+[lib]
+name = "data_link_lib"
+path = "src/lib.rs"
+
+[[bin]]
+name = "data_link_gui"
+path = "src/bin/data_link_gui.rs" 
