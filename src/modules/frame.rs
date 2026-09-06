@@ -1,4 +1,4 @@
-use crate::modules::protocols::LinkLayerProtocol;
+use crate::modules::protocol::LinkLayerProtocol;
 
 pub struct LinkLayerFrame {
     pub timestamp: f64,

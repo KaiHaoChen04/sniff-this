@@ -1,6 +1,6 @@
 use crate::modules::{
     frame::LinkLayerFrame,
-    protocols::{parse_arp_packet, parse_vlan_packet, LinkLayerProtocol},
+    protocol::{parse_arp_packet, parse_vlan_packet, LinkLayerProtocol},
 };
 use pnet::{
     datalink::{self, NetworkInterface},
