@@ -1,6 +1,8 @@
 use pnet::packet::{
     arp::{ArpOperation, ArpPacket},
+    ipv4::Ipv4Packet,
     vlan::VlanPacket,
+    Packet,
 };
 
 #[derive(Debug, Clone)]
@@ -35,4 +37,8 @@ pub fn parse_vlan_packet(vlan: &VlanPacket) -> (u16, String) {
     let pcp = vlan.get_priority_code_point().0;
     let dei = vlan.get_drop_eligible_indicator();
     (vlan_id, format!("PCP={}, DEI={}", pcp, dei))
+}
+
+pub fn parse_ipv4_packets(ipv4_packet: &Ipv4Packet) -> Vec<u8> {
+    ipv4_packet.payload().to_vec()
 }
