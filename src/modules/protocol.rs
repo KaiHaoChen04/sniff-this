@@ -1,6 +1,7 @@
 use pnet::packet::{
     arp::{ArpOperation, ArpPacket},
     ipv4::Ipv4Packet,
+    ipv6::Ipv6Packet,
     vlan::VlanPacket,
     Packet,
 };
@@ -41,4 +42,8 @@ pub fn parse_vlan_packet(vlan: &VlanPacket) -> (u16, String) {
 
 pub fn parse_ipv4_packets(ipv4_packet: &Ipv4Packet) -> Vec<u8> {
     ipv4_packet.payload().to_vec()
+}
+
+pub fn parse_ipv6_packets(ipv6_packets: &Ipv6Packet) -> Vec<u8> {
+    ipv6_packets.payload().to_vec()
 }
