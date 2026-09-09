@@ -1,12 +1,13 @@
 use crate::modules::{
     frame::LinkLayerFrame,
-    protocol::{parse_arp_packet, parse_vlan_packet, LinkLayerProtocol},
+    protocol::{parse_arp_packet, parse_ipv4_packets, parse_vlan_packet, LinkLayerProtocol},
 };
 use pnet::{
     datalink::{self, NetworkInterface},
     packet::{
         arp::ArpPacket,
         ethernet::{EtherTypes, EthernetPacket},
+        ipv4::Ipv4Packet,
         vlan::VlanPacket,
         Packet,
     },
@@ -36,7 +37,12 @@ fn classify_ethernet(ethernet: &EthernetPacket, packet_len: usize) -> LinkLayerP
             .unwrap_or_else(|| LinkLayerProtocol::Unknown("Malformed VLAN".into())),
         EtherTypes::Ptp => LinkLayerProtocol::PPP("PPP Frame".into()),
         EtherTypes::Mpls => LinkLayerProtocol::Tunnel("MPLS frame".into()),
-        EtherTypes::Ipv4 => LinkLayerProtocol::IPV4("IPV4".into()),
+        EtherTypes::Ipv4 => Ipv4Packet::new(ethernet.payload())
+            .map(|ipv4| {
+                let payload = parse_ipv4_packets(&ipv4);
+                LinkLayerProtocol::IPV4(payload)
+            })
+            .unwrap_or_else(|| LinkLayerProtocol::Unknown("Malformed ipv4".into())),
         EtherTypes::Ipv6 => LinkLayerProtocol::IPV6("IPV6".into()),
         other if other.0 == 34525 => {
             let direction = match packet_len {

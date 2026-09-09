@@ -40,8 +40,15 @@ pub fn parse_vlan_packet(vlan: &VlanPacket) -> (u16, String) {
     (vlan_id, format!("PCP={}, DEI={}", pcp, dei))
 }
 
-pub fn parse_ipv4_packets(ipv4_packet: &Ipv4Packet) -> Vec<u8> {
-    ipv4_packet.payload().to_vec()
+pub fn parse_ipv4_packets(ipv4_packet: &Ipv4Packet) -> String {
+    let payload = ipv4_packet.payload().to_vec();
+    let source = ipv4_packet.get_source();
+    let dest = ipv4_packet.get_destination();
+
+    format!(
+        "Source: ({}) Dest: ({}) Payload({}) ",
+        source, dest, payload
+    )
 }
 
 pub fn parse_ipv6_packets(ipv6_packets: &Ipv6Packet) -> Vec<u8> {
