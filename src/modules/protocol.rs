@@ -5,6 +5,7 @@ use pnet::packet::{
     vlan::VlanPacket,
     Packet,
 };
+use std::net::IpAddr;
 
 #[derive(Debug, Clone)]
 pub enum LinkLayerProtocol {
@@ -15,6 +16,29 @@ pub enum LinkLayerProtocol {
     Unknown(String),
     IPV4(String),
     IPV6(String),
+}
+
+trait IpPacketAddress {
+    fn src_addr(&self) -> IpAddr;
+    fn dest_addr(&self) -> IpAddr;
+}
+
+impl IpPacketAddress for Ipv4Packet<'_> {
+    fn src_addr(&self) -> IpAddr {
+        IpAddr::V4(self.get_source())
+    }
+    fn dest_addr(&self) -> IpAddr {
+        IpAddr::V4(self.get_destination())
+    }
+}
+
+impl IpPacketAddress for Ipv6Packet<'_> {
+    fn src_addr(&self) -> IpAddr {
+        IpAddr::V6(self.get_source())
+    }
+    fn dest_addr(&self) -> IpAddr {
+        IpAddr::V6(self.get_destination())
+    }
 }
 
 pub fn parse_arp_packet(arp: &ArpPacket) -> String {
@@ -40,18 +64,20 @@ pub fn parse_vlan_packet(vlan: &VlanPacket) -> (u16, String) {
     (vlan_id, format!("PCP={}, DEI={}", pcp, dei))
 }
 
-pub fn parse_ipv4_packets(ipv4_packet: &Ipv4Packet) -> String {
-    let payload = ipv4_packet.payload().to_vec();
-    let payload_hex: String = payload.iter().map(|byte| format!("{:02x}", byte)).collect();
-    let source = ipv4_packet.get_source();
-    let dest = ipv4_packet.get_destination();
+pub fn parse_ip_packets<T>(packet: T) -> String
+where
+    T: Packet + IpPacketAddress,
+{
+    let payload_hex: String = packet
+        .payload()
+        .iter()
+        .map(|byte| format!("{:02x}", byte))
+        .collect();
 
     format!(
-        "Source: ({}) Dest: ({}) Payload({}) ",
-        source, dest, payload_hex
+        "Source: {}  Dest: {} Payload ({})",
+        packet.src_addr(),
+        packet.dest_addr(),
+        payload_hex
     )
-}
-
-pub fn parse_ipv6_packets(ipv6_packets: &Ipv6Packet) -> Vec<u8> {
-    ipv6_packets.payload().to_vec()
 }
