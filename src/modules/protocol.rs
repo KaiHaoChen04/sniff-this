@@ -42,12 +42,13 @@ pub fn parse_vlan_packet(vlan: &VlanPacket) -> (u16, String) {
 
 pub fn parse_ipv4_packets(ipv4_packet: &Ipv4Packet) -> String {
     let payload = ipv4_packet.payload().to_vec();
+    let payload_hex: String = payload.iter().map(|byte| format!("{:02x}", byte)).collect();
     let source = ipv4_packet.get_source();
     let dest = ipv4_packet.get_destination();
 
     format!(
         "Source: ({}) Dest: ({}) Payload({}) ",
-        source, dest, payload
+        source, dest, payload_hex
     )
 }
 
