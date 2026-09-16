@@ -1,20 +1,34 @@
 {
     "$schema": "https://opencode.ai/config.json",
+    "default_agent": "plan",
     "agent": {
-        "build": {
+        "plan": {
             "mode": "primary",
-            "prompt": "Build according to @plan",
-            "permission": {
-                "edit": "allow",
-                "bash": "allow"
-            }
-        },
-        "plan":{
-            "mode": "primary",
-            "prompt": "Plan according to user's prompt and delegate to build agent",
+            "prompt": "Plan according to the user's prompt. Do not make any edits or run mutating commands. When the plan is ready, present it clearly and tell the user to switch to the Build agent (Tab) to execute it.",
             "permission": {
                 "edit": "deny",
-                "bash": "allow"
+                "bash": {
+                    "*": "ask",
+                    "ls*": "allow",
+                    "cat*": "allow",
+                    "grep*": "allow",
+                    "find*": "allow"
+                }
+            }
+        },
+        "build": {
+            "mode": "primary",
+            "prompt": "Build according to @plan. Once changes are complete and verified, invoke the git-reviewer subagent to review and commit the files individually.",
+            "permission": {
+                "edit": "allow",
+                "bash": {
+                    "*": "allow",
+                    "rm -rf*": "deny"
+                },
+                "webfetch": "allow",
+                "subagent": {
+                    "git-reviewer": "allow"
+                }
             }
         },
         "git-reviewer": {
@@ -23,7 +37,7 @@
             "permission": {
                 "bash": {
                     "*": "ask",
-                    "git *": "allow"      
+                    "git *": "allow"
                 }
             }
         }
