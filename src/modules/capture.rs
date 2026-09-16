@@ -1,6 +1,6 @@
 use crate::modules::{
     frame::LinkLayerFrame,
-    protocol::{parse_arp_packet, parse_ipv4_packets, parse_vlan_packet, LinkLayerProtocol},
+    protocol::{parse_arp_packet, parse_ip_packets, parse_vlan_packet, LinkLayerProtocol},
 };
 use pnet::{
     datalink::{self, NetworkInterface},
@@ -39,7 +39,7 @@ fn classify_ethernet(ethernet: &EthernetPacket, packet_len: usize) -> LinkLayerP
         EtherTypes::Mpls => LinkLayerProtocol::Tunnel("MPLS frame".into()),
         EtherTypes::Ipv4 => Ipv4Packet::new(ethernet.payload())
             .map(|ipv4| {
-                let payload = parse_ipv4_packets(&ipv4);
+                let payload = parse_ip_packets(ipv4);
                 LinkLayerProtocol::IPV4(payload)
             })
             .unwrap_or_else(|| LinkLayerProtocol::Unknown("Malformed ipv4".into())),
