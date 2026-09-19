@@ -8,6 +8,7 @@ use pnet::{
         arp::ArpPacket,
         ethernet::{EtherTypes, EthernetPacket},
         ipv4::Ipv4Packet,
+        ipv6::Ipv6Packet,
         vlan::VlanPacket,
         Packet,
     },
@@ -43,7 +44,12 @@ fn classify_ethernet(ethernet: &EthernetPacket, packet_len: usize) -> LinkLayerP
                 LinkLayerProtocol::IPV4(payload)
             })
             .unwrap_or_else(|| LinkLayerProtocol::Unknown("Malformed ipv4".into())),
-        EtherTypes::Ipv6 => LinkLayerProtocol::IPV6("IPV6".into()),
+        EtherTypes::Ipv6 => Ipv6Packet::new(ethernet.payload())
+            .map(|ipv6| {
+                let payload = parse_ip_packets(ipv6);
+                LinkLayerProtocol::IPV6(payload)
+            })
+            .unwrap_or_else(|| LinkLayerProtocol::Unknown("Malformed ipv4".into())),
         other if other.0 == 34525 => {
             let direction = match packet_len {
                 74 => "Request",
