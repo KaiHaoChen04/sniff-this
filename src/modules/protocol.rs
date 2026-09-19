@@ -18,7 +18,7 @@ pub enum LinkLayerProtocol {
     IPV6(String),
 }
 
-trait IpPacketAddress {
+pub trait IpPacketAddress {
     fn src_addr(&self) -> IpAddr;
     fn dest_addr(&self) -> IpAddr;
 }
