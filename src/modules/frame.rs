@@ -21,8 +21,18 @@ pub fn format_frame(frame: &LinkLayerFrame, count: usize) -> String {
     };
 
     format!(
-        "{:>6} {:>12.2} {:>18} -> {:>18} {:>4} {}\n",
+        "{:>6} {:>12.6} {:>17} -> {:>17} {:>5} {}\n",
         count, frame.timestamp, frame.source_mac, frame.dest_mac, frame.length, protocol_string,
+    )
+}
+
+/// Column header for the packet list. Uses the exact same widths as
+/// `format_frame` (4 spaces stand in for the `" -> "` separator) so the
+/// header and rows stay aligned in a monospace face.
+pub fn list_header() -> String {
+    format!(
+        "{:>6} {:>12} {:>17}    {:>17} {:>5} {}",
+        "No.", "Time", "Source MAC", "Dest MAC", "Len", "Protocol & Details",
     )
 }
 
