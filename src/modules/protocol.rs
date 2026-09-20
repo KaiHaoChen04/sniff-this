@@ -68,16 +68,43 @@ pub fn parse_ip_packets<T>(packet: T) -> String
 where
     T: Packet + IpPacketAddress,
 {
-    let payload_hex: String = packet
-        .payload()
-        .iter()
-        .map(|byte| format!("{:02x}", byte))
-        .collect();
-
     format!(
-        "Source: {}  Dest: {} Payload ({})",
+        "Source: {}  Dest: {}",
         packet.src_addr(),
         packet.dest_addr(),
-        payload_hex
     )
+}
+
+/// Classic 16-bytes-per-line hex dump with offset and ASCII gutter,
+/// so long payloads are readable in a separate detail pane.
+pub fn hex_dump(bytes: &[u8]) -> String {
+    if bytes.is_empty() {
+        return String::from("(empty payload)\n");
+    }
+    let mut out = String::new();
+    for (i, chunk) in bytes.chunks(16).enumerate() {
+        let offset = i * 16;
+        out.push_str(&format!("{:04x}  ", offset));
+        for j in 0..16 {
+            if j < chunk.len() {
+                out.push_str(&format!("{:02x} ", chunk[j]));
+            } else {
+                out.push_str("   ");
+            }
+            if j == 7 {
+                out.push(' ');
+            }
+        }
+        out.push_str(" |");
+        for b in chunk {
+            let c = if b.is_ascii_graphic() || *b == b' ' {
+                *b as char
+            } else {
+                '.'
+            };
+            out.push(c);
+        }
+        out.push_str("|\n");
+    }
+    out
 }
