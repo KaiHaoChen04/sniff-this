@@ -1,4 +1,4 @@
-use data_link_lib::{list_interfaces, run_capture, CapturedPacket};
+use data_link_lib::{list_header, list_interfaces, run_capture, CapturedPacket};
 use fltk::{
     app,
     browser::HoldBrowser,
@@ -43,10 +43,7 @@ fn main() {
 
     let mut start_button = Button::new(440, 10, 70, 25, "Start");
 
-    let list_header_text = format!(
-        "{:>6} {:>12} {:>18} {:>20} {:>4} {}",
-        "No.", "Time", "Source MAC", "Dest MAC", "Len", "Protocol & Details"
-    );
+    let list_header_text = list_header();
     let mut list_header = Frame::new(10, 42, 1180, 20, list_header_text.as_str());
     list_header.set_align(Align::Left | Align::Inside);
     list_header.set_label_font(Font::Courier);
@@ -54,6 +51,10 @@ fn main() {
 
     let mut packet_list = HoldBrowser::new(10, 62, 1180, 330, None);
     packet_list.set_text_size(12);
+    // HoldBrowser has no set_text_font API, so force the monospace Courier
+    // face (FLTK font 4) per row. '@' is the format char; escape any
+    // literal '@' in packet text as '@@' so columns never shift.
+    packet_list.set_format_char('@');
 
     let mut detail_header = Frame::new(10, 398, 1180, 20, "Hex Payload (click a packet above)");
     detail_header.set_align(Align::Left | Align::Inside);
@@ -153,8 +154,10 @@ fn main() {
     while app.wait() {
         if let Some(msg) = receiver.recv() {
             // Browser rows are 1-indexed; vec index = row - 1.
+            // "@F4" selects Courier so rows align with the Courier header.
             packets.lock().unwrap().push(msg.clone());
-            packet_list.add(&msg.summary);
+            let row = format!("@F4{}", msg.summary.replace('@', "@@"));
+            packet_list.add(&row);
             // Don't yank the view away while the user inspects a row.
             if packet_list.value() == 0 {
                 packet_list.bottom_line(packet_list.size());
