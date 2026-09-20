@@ -20,8 +20,6 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-/// One captured packet: short one-line summary for the packet list
-/// plus a multi-line detail (with hex dump) for the bottom pane.
 #[derive(Debug, Clone)]
 pub struct CapturedPacket {
     pub summary: String,
@@ -31,7 +29,6 @@ pub struct CapturedPacket {
 impl CapturedPacket {
     pub fn error(msg: impl Into<String>) -> Self {
         let detail = msg.into();
-        // Browser rows must be single-line; keep detail verbatim.
         let summary = detail.trim_end().to_string();
         Self { summary, detail }
     }
@@ -94,9 +91,6 @@ fn protocol_matches_filter(protocol: &LinkLayerProtocol, filter: usize) -> bool 
     }
 }
 
-/// Runs the capture loop until `running` is set false.
-/// `on_frame` is called with each filtered packet (summary + hex detail)
-/// so this function has no idea a GUI exists.
 pub fn run_capture(
     interface: NetworkInterface,
     running: Arc<Mutex<bool>>,
