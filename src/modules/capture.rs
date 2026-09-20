@@ -1,6 +1,8 @@
 use crate::modules::{
-    frame::LinkLayerFrame,
-    protocol::{parse_arp_packet, parse_ip_packets, parse_vlan_packet, LinkLayerProtocol},
+    frame::{format_detail, format_frame, LinkLayerFrame},
+    protocol::{
+        hex_dump, parse_arp_packet, parse_ip_packets, parse_vlan_packet, LinkLayerProtocol,
+    },
 };
 use pnet::{
     datalink::{self, NetworkInterface},
@@ -17,6 +19,23 @@ use std::{
     sync::{Arc, Mutex},
     time::{SystemTime, UNIX_EPOCH},
 };
+
+/// One captured packet: short one-line summary for the packet list
+/// plus a multi-line detail (with hex dump) for the bottom pane.
+#[derive(Debug, Clone)]
+pub struct CapturedPacket {
+    pub summary: String,
+    pub detail: String,
+}
+
+impl CapturedPacket {
+    pub fn error(msg: impl Into<String>) -> Self {
+        let detail = msg.into();
+        // Browser rows must be single-line; keep detail verbatim.
+        let summary = detail.trim_end().to_string();
+        Self { summary, detail }
+    }
+}
 
 pub fn list_interfaces() -> Vec<NetworkInterface> {
     datalink::interfaces()
@@ -76,14 +95,14 @@ fn protocol_matches_filter(protocol: &LinkLayerProtocol, filter: usize) -> bool 
 }
 
 /// Runs the capture loop until `running` is set false.
-/// `on_frame` is called with each formatted, already-filtered line
+/// `on_frame` is called with each filtered packet (summary + hex detail)
 /// so this function has no idea a GUI exists.
 pub fn run_capture(
     interface: NetworkInterface,
     running: Arc<Mutex<bool>>,
     frame_count: Arc<Mutex<usize>>,
     selected_protocol: Arc<Mutex<usize>>,
-    on_frame: impl Fn(String) + Send + 'static,
+    on_frame: impl Fn(CapturedPacket) + Send + 'static,
 ) {
     let config = datalink::Config {
         write_buffer_size: 4096,
@@ -100,11 +119,14 @@ pub fn run_capture(
     let mut rx = match datalink::channel(&interface, config) {
         Ok(datalink::Channel::Ethernet(_tx, rx)) => rx,
         Ok(_) => {
-            on_frame("Error: not an ethernet channel\n".to_string());
+            on_frame(CapturedPacket::error("Error: not an ethernet channel\n"));
             return;
         }
         Err(e) => {
-            on_frame(format!("Error creating channel: {}\n", e));
+            on_frame(CapturedPacket::error(format!(
+                "Error creating channel: {}\n",
+                e
+            )));
             return;
         }
     };
@@ -134,16 +156,24 @@ pub fn run_capture(
                             dest_mac: ethernet.get_destination().to_string(),
                             protocol,
                             length: packet.len(),
+                            hex_detail: hex_dump(packet),
                         };
 
                         let mut count = frame_count.lock().unwrap();
                         *count += 1;
-                        on_frame(crate::modules::frame::format_frame(&frame, *count));
+                        let summary = format_frame(&frame, *count);
+                        // Strip the trailing newline: Browser rows must be single-line.
+                        let summary = summary.trim_end().to_string();
+                        let detail = format_detail(&frame, *count);
+                        on_frame(CapturedPacket { summary, detail });
                     }
                 }
             }
             Err(e) => {
-                on_frame(format!("Error capturing packet {}\n", e));
+                on_frame(CapturedPacket::error(format!(
+                    "Error capturing packet {}\n",
+                    e
+                )));
                 break;
             }
         }
