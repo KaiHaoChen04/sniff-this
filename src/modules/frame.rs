@@ -21,7 +21,7 @@ pub fn format_frame(frame: &LinkLayerFrame, count: usize) -> String {
     };
 
     format!(
-        "{:>6} {:>12.6} {:>18} -> {:>18} {:>4} {}\n",
+        "{:>6} {:>12.2} {:>18} -> {:>18} {:>4} {}\n",
         count, frame.timestamp, frame.source_mac, frame.dest_mac, frame.length, protocol_string,
     )
 }
