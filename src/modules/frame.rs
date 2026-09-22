@@ -26,9 +26,6 @@ pub fn format_frame(frame: &LinkLayerFrame, count: usize) -> String {
     )
 }
 
-/// Column header for the packet list. Uses the exact same widths as
-/// `format_frame` (4 spaces stand in for the `" -> "` separator) so the
-/// header and rows stay aligned in a monospace face.
 pub fn list_header() -> String {
     format!(
         "{:>6} {:>12} {:>17}    {:>17} {:>5} {}",
@@ -36,8 +33,6 @@ pub fn list_header() -> String {
     )
 }
 
-/// Multi-line detail shown in the bottom pane when a row is clicked.
-/// Keeps the long hex payload out of the one-line packet list.
 pub fn format_detail(frame: &LinkLayerFrame, count: usize) -> String {
     let protocol_string = match &frame.protocol {
         LinkLayerProtocol::ARP(d) => format!("ARP {}", d),
