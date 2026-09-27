@@ -158,7 +158,6 @@ fn main() {
             packets.lock().unwrap().push(msg.clone());
             let row = format!("@F4{}", msg.summary.replace('@', "@@"));
             packet_list.add(&row);
-            // Don't yank the view away while the user inspects a row.
             if packet_list.value() == 0 {
                 packet_list.bottom_line(packet_list.size());
             }
