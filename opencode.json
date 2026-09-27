@@ -14,7 +14,8 @@
                     "grep*": "allow",
                     "find*": "allow"
                 }
-            }
+            },
+            "temperature": 0.7
         },
         "build": {
             "mode": "primary",
@@ -29,7 +30,8 @@
                 "subagent": {
                     "git-reviewer": "allow"
                 }
-            }
+            },
+            "temperature": 0.2
         },
         "git-reviewer": {
             "mode": "subagent",
