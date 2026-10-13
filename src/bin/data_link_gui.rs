@@ -1,4 +1,4 @@
-use data_link_lib::{list_header, list_interfaces, run_capture, CapturedPacket};
+use data_link_lib::{list_header, list_interfaces, list_local, run_capture, CapturedPacket};
 use fltk::{
     app,
     browser::HoldBrowser,
@@ -13,6 +13,29 @@ use fltk::{
 use fltk_theme::{color_themes, ColorTheme};
 use std::sync::{Arc, Mutex};
 use std::thread;
+
+fn refresh_lan_list(browser: &mut HoldBrowser, header: &mut Frame) {
+    match list_local() {
+        Ok(ips) => {
+            browser.clear();
+            if ips.is_empty() {
+                browser.add("No private IPs found.");
+                header.set_label("Local Network (0 hosts)");
+            } else {
+                for ip in &ips {
+                    browser.add(ip);
+                }
+                header.set_label(&format!("Local Network ({} hosts)", ips.len()));
+            }
+        }
+        Err(e) => {
+            browser.clear();
+            browser.add(&format!("Error: {}", e));
+            header.set_label("Local Network (error)");
+            eprintln!("list_local failed: {}", e);
+        }
+    }
+}
 
 fn main() {
     let app = app::App::default().with_scheme(app::Scheme::Gtk);
@@ -42,6 +65,7 @@ fn main() {
     protocol_choices.set_value(0);
 
     let mut start_button = Button::new(440, 10, 70, 25, "Start");
+    let mut lan_button = Button::new(520, 10, 80, 25, "LAN IPs");
 
     let list_header_text = list_header();
     let mut list_header = Frame::new(10, 42, 1180, 20, list_header_text.as_str());
@@ -70,6 +94,18 @@ fn main() {
 
     wind.end();
     wind.show();
+
+    // Popup window listing private IPs on the local network.
+    // Kept hidden until the "LAN IPs" button is clicked.
+    let lan_win = Window::new(300, 200, 360, 420, "Local Network IPs");
+    let mut lan_header = Frame::new(10, 10, 340, 20, "Local Network");
+    lan_header.set_align(Align::Left | Align::Inside);
+    lan_header.set_label_size(12);
+    let mut lan_list = HoldBrowser::new(10, 35, 340, 340, None);
+    lan_list.set_text_size(12);
+    let mut lan_refresh = Button::new(10, 380, 165, 30, "Refresh");
+    let mut lan_close = Button::new(185, 380, 165, 30, "Close");
+    lan_win.end();
 
     let (sender, receiver) = app::channel::<CapturedPacket>();
     let running = Arc::new(Mutex::new(false));
@@ -149,6 +185,27 @@ fn main() {
                 });
             }
         }
+    });
+
+    lan_button.set_callback({
+        let mut lan_win = lan_win.clone();
+        let mut lan_list = lan_list.clone();
+        let mut lan_header = lan_header.clone();
+        move |_| {
+            refresh_lan_list(&mut lan_list, &mut lan_header);
+            lan_win.show();
+        }
+    });
+
+    lan_refresh.set_callback({
+        let mut lan_list = lan_list.clone();
+        let mut lan_header = lan_header.clone();
+        move |_| refresh_lan_list(&mut lan_list, &mut lan_header)
+    });
+
+    lan_close.set_callback({
+        let mut lan_win = lan_win.clone();
+        move |_| lan_win.hide()
     });
 
     while app.wait() {
