@@ -38,8 +38,11 @@
             "prompt": "Check files individually and commit them individually with their corresponding changes in the commit message.",
             "permission": {
                 "bash": {
-                    "*": "ask",
-                    "git *": "allow"
+                    "git *": "allow",
+                    "ls *": "allow",
+                    "grep *": "allow",
+                    "echo":"allow",
+                    "cat":"allow"
                 }
             }
         }
